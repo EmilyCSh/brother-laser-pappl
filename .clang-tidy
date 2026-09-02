@@ -1,0 +1,17 @@
+Checks: >-
+  bugprone-*,
+  clang-analyzer-*,
+  concurrency-*,
+  cppcoreguidelines-*,
+  misc-*,
+  modernize-*,
+  performance-*,
+  portability-*,  
+  readability-*,
+  hicpp-*,
+  -bugprone-easily-swappable-parameters,
+WarningsAsErrors: '*'
+CheckOptions:
+  misc-include-cleaner.IgnoreHeaders: 'pappl/.*; cups/.*'
+  bugprone-exception-escape.TreatFunctionsWithoutSpecificationAsThrowing: 'OnlyUndefined'
+  bugprone-unused-return-value.AllowCastToVoid: 'true'
