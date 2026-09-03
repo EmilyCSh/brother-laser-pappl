@@ -6,7 +6,8 @@
  */
 
 module;
-#include <pappl/pappl.h>
+#include <pappl/base.h>
+#include <pappl/device.h>
 #include <cstddef>
 #include <expected>
 #include <memory>
@@ -45,7 +46,7 @@ auto device_open(const std::string& driver_name, const std::string& device_uri) 
 };
 
 //NOLINTNEXTLINE(bugprone-exception-escape)
-auto device_write(const PapplDevicePtr& device, const std::span<const std::byte> buffer) noexcept -> std::expected<size_t, common::DeviceError>
+auto device_write(const PapplDevicePtr& device, std::span<const std::byte> buffer) noexcept -> std::expected<size_t, common::DeviceError>
 {
     const auto bytes_written = papplDeviceWrite(device.get(), buffer.data(), buffer.size());
     if (bytes_written < 0)
@@ -56,7 +57,7 @@ auto device_write(const PapplDevicePtr& device, const std::span<const std::byte>
     return static_cast<size_t>(bytes_written);
 };
 
-auto device_write_all(const PapplDevicePtr& device, const std::span<const std::byte> buffer) noexcept -> std::expected<void, common::DeviceError>
+auto device_write_all(const PapplDevicePtr& device, std::span<const std::byte> buffer) noexcept -> std::expected<void, common::DeviceError>
 {
     size_t total_bytes_written = 0;
 
@@ -75,7 +76,7 @@ auto device_write_all(const PapplDevicePtr& device, const std::span<const std::b
     return {};
 };
 
-auto device_write_all(const PapplDevicePtr& device, const std::string_view buffer) noexcept -> std::expected<void, common::DeviceError>
+auto device_write_all(const PapplDevicePtr& device, std::string_view buffer) noexcept -> std::expected<void, common::DeviceError>
 {
     return device_write_all(device, std::as_bytes(std::span(buffer)));
 };
