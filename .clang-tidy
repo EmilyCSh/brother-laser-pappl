@@ -11,6 +11,7 @@ Checks: >-
   hicpp-*,
   -bugprone-easily-swappable-parameters,
   -readability-redundant-declaration,
+  -performance-enum-size,
 WarningsAsErrors: '*'
 CheckOptions:
   misc-include-cleaner.IgnoreHeaders: '.*/src/.*\.cpp'

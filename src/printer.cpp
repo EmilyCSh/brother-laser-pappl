@@ -1,4 +1,5 @@
 module;
+#include <atomic>
 #include <print>
 #include <string>
 #include <cstddef>
@@ -12,8 +13,16 @@ import brother_laser.pappl;
 
 export namespace brother_laser {
 
+
 class Printer
 {
+    enum class EnergyState
+    {
+        WORKING,
+        IDLE,
+        SLEEP,
+    };
+
 private:
     struct PrivateConstructor
     {
@@ -24,9 +33,12 @@ private:
     std::string m_device_uri;
     std::shared_ptr<PapplDevice> m_device;
 
+    std::atomic<EnergyState> m_energy_state;
+
 public:
     Printer(PrivateConstructor /* private constructor */, std::string driver_name, std::string device_uri, std::shared_ptr<PapplDevice> device)
-        : m_driver_name(std::move(driver_name)), m_device_uri(std::move(device_uri)), m_device(std::move(device))
+        : m_driver_name(std::move(driver_name)), m_device_uri(std::move(device_uri)), m_device(std::move(device)),
+          m_energy_state(EnergyState::WORKING)
     {}
 
     ~Printer()
@@ -36,8 +48,8 @@ public:
 
     Printer(const Printer&)                    = delete;
     auto operator=(const Printer&) -> Printer& = delete;
-    Printer(Printer&&)                         = default;
-    auto operator=(Printer&&) -> Printer&      = default;
+    Printer(Printer&&)                         = delete;
+    auto operator=(Printer&&) -> Printer&      = delete;
 
     [[nodiscard]] static auto create_shared(const std::string& driver_name, const std::string& device_uri)
         -> std::expected<std::shared_ptr<Printer>, common::DeviceError>
@@ -62,6 +74,7 @@ public:
 
     [[nodiscard]] auto send(std::string_view command) noexcept -> std::expected<void, common::DeviceError>
     {
+        set_energystate(EnergyState::WORKING);
         return m_device->write_all(command);
     }
 
@@ -113,6 +126,20 @@ public:
     [[nodiscard]] auto testprint() noexcept -> std::expected<void, common::DeviceError>
     {
         return send_pjl_cmd("EXECUTE TESTPRINT");
+    }
+
+    [[nodiscard]] auto get_energystate() noexcept -> EnergyState
+    {
+        return m_energy_state.load(std::memory_order::acquire);
+    }
+
+    auto set_energystate(EnergyState state) -> void
+    {
+        m_energy_state.store(state, std::memory_order::release);
+    }
+
+    auto energystate_heartbeat() -> void {
+        
     }
 
 private:
