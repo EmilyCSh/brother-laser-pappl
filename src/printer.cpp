@@ -22,10 +22,10 @@ private:
 
     std::string m_driver_name;
     std::string m_device_uri;
-    pappl::PapplDevicePtr m_device;
+    std::shared_ptr<PapplDevice> m_device;
 
 public:
-    Printer(PrivateConstructor /* private constructor */, std::string driver_name, std::string device_uri, pappl::PapplDevicePtr device)
+    Printer(PrivateConstructor /* private constructor */, std::string driver_name, std::string device_uri, std::shared_ptr<PapplDevice> device)
         : m_driver_name(std::move(driver_name)), m_device_uri(std::move(device_uri)), m_device(std::move(device))
     {}
 
@@ -42,13 +42,14 @@ public:
     [[nodiscard]] static auto create_shared(const std::string& driver_name, const std::string& device_uri)
         -> std::expected<std::shared_ptr<Printer>, common::DeviceError>
     {
-        auto device = pappl::device_open(driver_name, device_uri);
+        auto device = PapplDevice::create_shared(driver_name, device_uri);
+
         if (!device)
         {
             return std::unexpected(device.error());
         }
 
-        auto printer = std::make_shared<Printer>(PrivateConstructor {}, driver_name, device_uri, std::move(device).value());
+        auto printer = std::make_shared<Printer>(PrivateConstructor {}, driver_name, device_uri, device.value());
 
         auto result = printer->init();
         if (!result)
@@ -61,7 +62,7 @@ public:
 
     [[nodiscard]] auto send(std::string_view command) noexcept -> std::expected<void, common::DeviceError>
     {
-        return pappl::device_write_all(m_device, command);
+        return m_device->write_all(command);
     }
 
     [[nodiscard]] auto send_uel() noexcept -> std::expected<void, common::DeviceError>
@@ -106,7 +107,7 @@ public:
 
     [[nodiscard]] auto receive_string(size_t output_len) -> std::expected<std::string, common::DeviceError>
     {
-        return pappl::device_read_string(m_device, output_len);
+        return m_device->read_string(output_len);
     }
 
     [[nodiscard]] auto testprint() noexcept -> std::expected<void, common::DeviceError>
