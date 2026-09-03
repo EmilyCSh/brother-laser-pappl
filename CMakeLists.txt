@@ -65,6 +65,10 @@ target_compile_options(brother-laser-pappl PRIVATE -O2 -Wall -Wextra -Werror -Wp
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     target_compile_options(brother-laser-pappl PRIVATE -Wunsafe-buffer-usage -Wthread-safety)
+
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 23)
+        target_compile_options(brother-laser-pappl PRIVATE -Wlifetime-safety-all)
+    endif()
 endif()
 
 target_link_libraries(brother-laser-pappl PRIVATE ${PAPPL_LIBRARIES})
