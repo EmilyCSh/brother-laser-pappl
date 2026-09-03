@@ -13,6 +13,6 @@ Checks: >-
   -readability-redundant-declaration,
 WarningsAsErrors: '*'
 CheckOptions:
-  misc-include-cleaner.IgnoreHeaders: '.*brother-laser-pappl/src/.*\.cpp'
+  misc-include-cleaner.IgnoreHeaders: '.*/src/.*\.cpp'
   bugprone-exception-escape.TreatFunctionsWithoutSpecificationAsThrowing: 'OnlyUndefined'
   bugprone-unused-return-value.AllowCastToVoid: 'true'
