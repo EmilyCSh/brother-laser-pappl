@@ -10,8 +10,9 @@ Checks: >-
   readability-*,
   hicpp-*,
   -bugprone-easily-swappable-parameters,
+  -readability-redundant-declaration,
 WarningsAsErrors: '*'
 CheckOptions:
-  misc-include-cleaner.IgnoreHeaders: 'pappl/.*; cups/.*'
+  misc-include-cleaner.IgnoreHeaders: '.*brother-laser-pappl/src/.*\.cpp'
   bugprone-exception-escape.TreatFunctionsWithoutSpecificationAsThrowing: 'OnlyUndefined'
   bugprone-unused-return-value.AllowCastToVoid: 'true'

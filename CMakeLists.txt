@@ -7,8 +7,8 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(PAPPL REQUIRED pappl)
-find_program(CLANG_TIDY_EXE NAMES clang-tidy OPTIONAL)
-find_program(CLANG_FORMAT_EXE NAMES clang-format OPTIONAL)
+find_program(CLANG_TIDY_EXE NAMES clang-tidy)
+find_program(CLANG_FORMAT_EXE NAMES clang-format)
 
 set(SOURCES
     src/main.cpp
@@ -29,7 +29,7 @@ target_sources(brother-laser-pappl
             ${MODULE_SOURCES}
 )
 
-if (DEFINED CLANG_FORMAT_EXE)
+if (CLANG_FORMAT_EXE)
     add_custom_target(clang-format
         COMMAND ${CLANG_FORMAT_EXE} --dry-run --Werror ${SOURCES} ${MODULE_SOURCES}
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
@@ -41,9 +41,9 @@ else()
     message(WARNING "clang-format not found, skipping format check")
 endif()
 
-if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang") 
+if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     if (NOT DEFINED CMAKE_CXX_CLANG_TIDY)
-        if (DEFINED CLANG_TIDY_EXE)
+        if (CLANG_TIDY_EXE)
             set(CMAKE_CXX_CLANG_TIDY ${CLANG_TIDY_EXE})
         else()
             message(WARNING "clang-tidy not found, skipping static analysis")
@@ -51,6 +51,11 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     endif()
 
     message(STATUS "clang-tidy set to: ${CMAKE_CXX_CLANG_TIDY}")
+
+    if (CMAKE_CXX_CLANG_TIDY)
+        set_target_properties(brother-laser-pappl PROPERTIES CXX_CLANG_TIDY "${CMAKE_CXX_CLANG_TIDY}")
+    endif()
+
     set_source_files_properties(${SOURCES} ${MODULE_SOURCES} PROPERTIES OBJECT_DEPENDS "${CMAKE_SOURCE_DIR}/.clang-tidy")
 else()
     message(WARNING "clang-tidy is only supported with Clang compiler, skipping static analysis")
