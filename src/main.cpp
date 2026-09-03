@@ -5,7 +5,9 @@
  *  Copyright (C) Emily <info@emy.sh>
  */
 
-import brother_laser;
+import brother_laser.common;
+import brother_laser.pappl;
+import brother_laser.printer;
 
 auto main() -> int
 {
