@@ -7,8 +7,8 @@ module;
 #include <string>
 #include <string_view>
 #include <vector>
-export module brother_laser:pappl;
-import :common;
+export module brother_laser.pappl;
+import brother_laser.common;
 
 export namespace brother_laser::pappl {
 

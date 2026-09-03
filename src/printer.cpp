@@ -6,9 +6,9 @@ module;
 #include <memory>
 #include <utility>
 #include <expected>
-export module brother_laser:printer;
-import :common;
-import :pappl;
+export module brother_laser.printer;
+import brother_laser.common;
+import brother_laser.pappl;
 
 export namespace brother_laser {
 

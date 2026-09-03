@@ -1,7 +1,7 @@
 module;
 #include <cstdint>
 #include <string_view>
-export module brother_laser:common;
+export module brother_laser.common;
 export namespace brother_laser::common {
 
 constexpr std::string_view CRLF    = "\r\n";

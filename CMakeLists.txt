@@ -15,7 +15,6 @@ set(SOURCES
 )
 
 set(MODULE_SOURCES
-    src/brother_laser.cpp
     src/common.cpp
     src/pappl.cpp
     src/printer.cpp
