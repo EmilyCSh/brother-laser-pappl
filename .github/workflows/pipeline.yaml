@@ -4,13 +4,18 @@ on:
   pull_request:
     branches:
       - "master"
+  push:
+    branches:
+      - "master"
 
 env: 
   pappl_ver: "1.4.12"
   CMAKE_CXX_COMPILER: "clang++-22"
+  CLANG_FORMAT_EXE: "/usr/bin/clang-format-22"
+  CLANG_TIDY_EXE: "/usr/bin/clang-tidy-22"
 
 jobs:
-  compilation:
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository code
@@ -51,7 +56,7 @@ jobs:
           sudo make install
       - name: Setup CMake Environment
         run: |
-          cmake -G Ninja -Bbuild -DCMAKE_CXX_COMPILER=${{ env.CMAKE_CXX_COMPILER }} -DCLANG_FORMAT_EXE=/usr/bin/clang-format-22 -DCLANG_TIDY_EXE=/usr/bin/clang-tidy-22 .
+          cmake -G Ninja -Bbuild -DCMAKE_CXX_COMPILER=${{ env.CMAKE_CXX_COMPILER }} -DCLANG_FORMAT_EXE=${{ env.CMAKE_FORMAT_EXE }} -DCLANG_TIDY_EXE= ${{ env.CLANG_TIDY_EXE }} .
       - name : CMake Build
         run: |
           cmake --build build
