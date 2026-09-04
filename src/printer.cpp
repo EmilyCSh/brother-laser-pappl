@@ -35,12 +35,12 @@ private:
     std::shared_ptr<PapplDevice> m_device;
 
     std::atomic<EnergyState> m_energy_state;
-    std::atomic<std::chrono::milliseconds> m_delta_last_job;
+    std::atomic<std::chrono::milliseconds::rep> m_delta_time_last_job;
 
 public:
     Printer(PrivateConstructor /* private constructor */, std::string driver_name, std::string device_uri, std::shared_ptr<PapplDevice> device)
         : m_driver_name(std::move(driver_name)), m_device_uri(std::move(device_uri)), m_device(std::move(device)),
-          m_energy_state(EnergyState::WORKING), m_delta_last_job(std::chrono::milliseconds(0))
+          m_energy_state(EnergyState::WORKING), m_delta_time_last_job(0)
     {}
 
     ~Printer()
@@ -127,6 +127,16 @@ public:
         return send_pjl_cmd("EXECUTE TESTPRINT");
     }
 
+    [[nodiscard]] auto get_delta_last_job() const -> std::chrono::milliseconds
+    {
+        return std::chrono::milliseconds(m_delta_time_last_job.load(std::memory_order_relaxed));
+    }
+
+    auto delta_last_job_reset() -> void
+    {
+        m_delta_time_last_job.store(0, std::memory_order_relaxed);
+    }
+
     [[nodiscard]] auto get_energystate() noexcept -> EnergyState
     {
         return m_energy_state.load(std::memory_order::acquire);
@@ -140,7 +150,7 @@ public:
     auto energystate_heartbeat() -> void
     {
         set_energystate(EnergyState::WORKING);
-        m_delta_last_job.store(std::chrono::milliseconds(0), std::memory_order::relaxed);
+        delta_last_job_reset();
     }
 
 private:
