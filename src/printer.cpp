@@ -127,6 +127,11 @@ public:
         return send_pjl_cmd("EXECUTE TESTPRINT");
     }
 
+    auto delta_last_job_add_time(std::chrono::milliseconds duration) -> void
+    {
+        m_delta_time_last_job.fetch_add(duration.count(), std::memory_order_relaxed);
+    }
+
     [[nodiscard]] auto get_delta_last_job() const -> std::chrono::milliseconds
     {
         return std::chrono::milliseconds(m_delta_time_last_job.load(std::memory_order_relaxed));
