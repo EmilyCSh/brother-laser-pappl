@@ -1,0 +1,41 @@
+name: Compilation with CMake/LLVM
+
+on:
+  pull_request:
+    branches: [ "master" ]
+  workflow_dispatch:
+
+jobs:
+  compilation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v7
+      - name: Update APT Repositories
+        run: |
+          apt-get update -y
+      - name: Install CMake Tools
+        run: |
+          wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | \
+            gpg --dearmor - | sudo tee /usr/share/keyrings/kitware-archive-keyring.gpg >/dev/null
+          echo "deb [signed-by=/usr/share/keyrings/kitware-archive-keyring.gpg] https://apt.kitware.com/ubuntu/ $(lsb_release -cs) main" | \
+            sudo tee /etc/apt/sources.list.d/kitware.list
+          apt-get update -y
+          apt-get install -y cmake ninja-build build-essentials
+      - name: Install LLVM Tools
+        run: |
+          apt-get install clang-format clang-tidy clang-tools clang clangd \
+                          libc++-dev libc++1 libc++abi-dev libc++abi1 libclang-dev \
+                          libclang1 liblldb-dev libllvm-ocaml-dev libomp-dev libomp5 \
+                          lld lldb llvm-dev llvm-runtime llvm python3-clang
+      - name: Install Development Libraries
+        run: |
+          apt-get install -y libavahi-client-dev libcups2-dev libcupsimage2-dev \
+                             libgnutls28-dev libjpeg-dev libpam-dev libpng-dev \
+                             libusb-1.0-0-dev zlib1g-dev
+      - name: Setup CMake Environment
+        run: |
+          cmake -G Ninja -Bbuild -D${{ vars.CMAKE_CXX_COMPILER }} .
+      - name : CMake Build
+        run: |
+          cmake --build
