@@ -1,6 +1,5 @@
 module;
 #include <atomic>
-#include <chrono>
 #include <print>
 #include <string>
 #include <cstddef>
@@ -35,12 +34,11 @@ private:
     std::shared_ptr<PapplDevice> m_device;
 
     std::atomic<EnergyState> m_energy_state;
-    std::atomic<std::chrono::milliseconds> m_delta_last_job;
 
 public:
     Printer(PrivateConstructor /* private constructor */, std::string driver_name, std::string device_uri, std::shared_ptr<PapplDevice> device)
         : m_driver_name(std::move(driver_name)), m_device_uri(std::move(device_uri)), m_device(std::move(device)),
-          m_energy_state(EnergyState::WORKING), m_delta_last_job(std::chrono::milliseconds(0))
+          m_energy_state(EnergyState::WORKING)
     {}
 
     ~Printer()
@@ -76,39 +74,42 @@ public:
 
     [[nodiscard]] auto send(std::string_view command) noexcept -> std::expected<void, common::DeviceError>
     {
-        energystate_heartbeat();
-        return send_impl(command);
+        set_energystate(EnergyState::WORKING);
+        return m_device->write_all(command);
+    }
+
+    [[nodiscard]] auto send_uel() noexcept -> std::expected<void, common::DeviceError>
+    {
+        return send(common::UEL);
     }
 
     [[nodiscard]] auto send_pjl_cmd(std::string_view command) noexcept -> std::expected<void, common::DeviceError>
     {
-        energystate_heartbeat();
-
-        auto result = send_impl(common::UEL);
+        auto result = send_uel();
         if (!result)
         {
             return std::unexpected(result.error());
         }
 
-        result = send_impl(common::PJL_PRE);
+        result = send(common::PJL_PRE);
         if (!result)
         {
             return std::unexpected(result.error());
         }
 
-        result = send_impl(" ");
+        result = send(" ");
         if (!result)
         {
             return std::unexpected(result.error());
         }
 
-        result = send_impl(command);
+        result = send(command);
         if (!result)
         {
             return std::unexpected(result.error());
         }
 
-        result = send_impl(common::CRLF);
+        result = send(common::CRLF);
         if (!result)
         {
             return std::unexpected(result.error());
@@ -137,18 +138,11 @@ public:
         m_energy_state.store(state, std::memory_order::release);
     }
 
-    auto energystate_heartbeat() -> void
-    {
-        set_energystate(EnergyState::WORKING);
-        m_delta_last_job.store(std::chrono::milliseconds(0), std::memory_order::relaxed);
+    auto energystate_heartbeat() -> void {
+        
     }
 
 private:
-    [[nodiscard]] auto send_impl(std::string_view command) noexcept -> std::expected<void, common::DeviceError>
-    {
-        return m_device->write_all(command);
-    }
-
     [[nodiscard]] auto reset() noexcept -> std::expected<void, common::DeviceError>
     {
         /* Ensure printer is really reset */
@@ -164,7 +158,7 @@ private:
             return std::unexpected(result.error());
         }
 
-        result = send(common::UEL);
+        result = send_uel();
         if (!result)
         {
             return std::unexpected(result.error());
