@@ -47,9 +47,11 @@ jobs:
                          clangd-22 clang-tidy-22 lld-22
       - name: Install Development Libraries
         run: |
-          sudo apt-get install -y libavahi-client-dev libcups2-dev libcupsimage2-dev \
-                             libgnutls28-dev libjpeg-dev libpam-dev libpng-dev \
-                             libusb-1.0-0-dev zlib1g-dev tar
+          sudo apt-get install -y libavahi-client-dev libavahi-common-dev \
+                             libcups2-dev libcupsimage2-dev libgnutls28-dev \
+                             libjpeg-dev libkrb5-dev libpam-dev libpng-dev \
+                             libp11-kit-dev libssl-dev libudev-dev \
+                             libunistring-dev libusb-1.0-0-dev zlib1g-dev tar
           wget https://github.com/michaelrsweet/pappl/releases/download/v${{ env.pappl_ver }}/pappl-${{ env.pappl_ver }}.tar.gz
           tar xf pappl-${{ env.pappl_ver }}.tar.gz
           cd pappl-${{ env.pappl_ver }}
@@ -58,7 +60,7 @@ jobs:
           sudo make install
       - name: Setup CMake Environment
         run: |
-          cmake -G Ninja -Bbuild -DCMAKE_CXX_COMPILER=${{ env.CMAKE_CXX_COMPILER }} -DCLANG_FORMAT_EXE=${{ env.CLANG_FORMAT_EXE }} -DCLANG_TIDY_EXE=${{ env.CLANG_TIDY_EXE }} .
+          cmake -G Ninja -Bbuild -DCMAKE_CXX_COMPILER=${{ env.CMAKE_CXX_COMPILER }} -DCMAKE_EXE_LINKER_FLAGS="-static" -DCLANG_FORMAT_EXE=${{ env.CLANG_FORMAT_EXE }} -DCLANG_TIDY_EXE=${{ env.CLANG_TIDY_EXE }} .
       - name : CMake Build
         run: |
           cmake --build build

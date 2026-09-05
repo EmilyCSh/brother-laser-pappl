@@ -71,6 +71,12 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     endif()
 endif()
 
-target_link_libraries(brother-laser-pappl PRIVATE ${PAPPL_LIBRARIES})
+if (NOT PAPPL_STATIC_LIBRARIES)
+    message(FATAL_ERROR "pkg-config did not provide PAPPL static link dependencies")
+endif()
+
+target_link_libraries(brother-laser-pappl PRIVATE
+    ${PAPPL_STATIC_LIBRARIES}
+)
 target_include_directories(brother-laser-pappl PRIVATE ${PAPPL_INCLUDE_DIRS})
 install(TARGETS brother-laser-pappl DESTINATION bin)
