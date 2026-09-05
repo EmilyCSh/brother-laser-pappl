@@ -7,8 +7,6 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(PAPPL REQUIRED pappl)
-pkg_check_modules(GNUTLS REQUIRED gnutls)
-pkg_check_modules(KRB5_GSSAPI REQUIRED krb5-gssapi)
 find_program(CLANG_TIDY_EXE NAMES clang-tidy)
 find_program(CLANG_FORMAT_EXE NAMES clang-format)
 
@@ -79,8 +77,6 @@ endif()
 
 target_link_libraries(brother-laser-pappl PRIVATE
     ${PAPPL_STATIC_LIBRARIES}
-    ${GNUTLS_STATIC_LIBRARIES}
-    ${KRB5_GSSAPI_STATIC_LIBRARIES}
 )
 target_include_directories(brother-laser-pappl PRIVATE ${PAPPL_INCLUDE_DIRS})
 install(TARGETS brother-laser-pappl DESTINATION bin)
