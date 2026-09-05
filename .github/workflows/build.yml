@@ -13,6 +13,8 @@ env:
   CMAKE_CXX_COMPILER: "clang++-22"
   CLANG_FORMAT_EXE: "/usr/bin/clang-format-22"
   CLANG_TIDY_EXE: "/usr/bin/clang-tidy-22"
+  BRANCH_NAME: ${{ github.head_ref || github.ref_name }} 
+  COMMIT_ID: ${{ github.sha }}
 
 jobs:
   build:
@@ -51,7 +53,7 @@ jobs:
           wget https://github.com/michaelrsweet/pappl/releases/download/v${{ env.pappl_ver }}/pappl-${{ env.pappl_ver }}.tar.gz
           tar xf pappl-${{ env.pappl_ver }}.tar.gz
           cd pappl-${{ env.pappl_ver }}
-          ./configure --disable-shared
+          ./configure
           make
           sudo make install
       - name: Setup CMake Environment
@@ -62,4 +64,5 @@ jobs:
           cmake --build build
       - uses: actions/upload-artifact@v7
         with:
+          name: brother-laser-pappl_${{ env.BRANCH_NAME }}-${{ env.COMMIT_ID }}
           path: build/brother-laser-pappl
