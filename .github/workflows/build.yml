@@ -47,9 +47,10 @@ jobs:
                          clangd-22 clang-tidy-22 lld-22
       - name: Install Development Libraries
         run: |
-          sudo apt-get install -y libavahi-client-dev libcups2-dev libcupsimage2-dev \
-                             libgnutls28-dev libjpeg-dev libpam-dev libpng-dev \
-                             libusb-1.0-0-dev zlib1g-dev tar
+          sudo apt-get install -y libavahi-client-dev libavahi-common-dev \
+                             libcups2-dev libcupsimage2-dev libgnutls28-dev \
+                             libjpeg-dev libkrb5-dev libpam-dev libpng-dev \
+                             libssl-dev libusb-1.0-0-dev zlib1g-dev tar
           wget https://github.com/michaelrsweet/pappl/releases/download/v${{ env.pappl_ver }}/pappl-${{ env.pappl_ver }}.tar.gz
           tar xf pappl-${{ env.pappl_ver }}.tar.gz
           cd pappl-${{ env.pappl_ver }}
