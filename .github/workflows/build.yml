@@ -1,4 +1,4 @@
-name: Compilation with CMake/LLVM
+name: Build with CMake/LLVM
 
 on:
   pull_request:
@@ -13,6 +13,8 @@ env:
   CMAKE_CXX_COMPILER: "clang++-22"
   CLANG_FORMAT_EXE: "/usr/bin/clang-format-22"
   CLANG_TIDY_EXE: "/usr/bin/clang-tidy-22"
+  BRANCH_NAME: ${{ github.head_ref || github.ref_name }} 
+  COMMIT_ID: ${{ github.sha }}
 
 jobs:
   build:
@@ -60,3 +62,7 @@ jobs:
       - name : CMake Build
         run: |
           cmake --build build
+      - uses: actions/upload-artifact@v7
+        with:
+          name: brother-laser-pappl_${{ env.BRANCH_NAME }}-${{ env.COMMIT_ID }}
+          path: build/brother-laser-pappl
