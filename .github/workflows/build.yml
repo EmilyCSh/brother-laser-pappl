@@ -1,4 +1,4 @@
-name: Compilation with CMake/LLVM
+name: Build with CMake/LLVM
 
 on:
   pull_request:
@@ -51,7 +51,7 @@ jobs:
           wget https://github.com/michaelrsweet/pappl/releases/download/v${{ env.pappl_ver }}/pappl-${{ env.pappl_ver }}.tar.gz
           tar xf pappl-${{ env.pappl_ver }}.tar.gz
           cd pappl-${{ env.pappl_ver }}
-          ./configure
+          ./configure --disable-shared
           make
           sudo make install
       - name: Setup CMake Environment
@@ -60,3 +60,6 @@ jobs:
       - name : CMake Build
         run: |
           cmake --build build
+      - uses: actions/upload-artifact@v7
+        with:
+          path: build/brother-laser-pappl
