@@ -1,7 +1,4 @@
 module;
-#include <atomic>
-#include <chrono>
-#include <print>
 #include <string>
 #include <cstddef>
 #include <string_view>
@@ -17,13 +14,6 @@ export namespace brother_laser {
 
 class Printer
 {
-    enum class EnergyState
-    {
-        WORKING,
-        IDLE,
-        SLEEP,
-    };
-
 private:
     struct PrivateConstructor
     {
@@ -34,13 +24,9 @@ private:
     std::string m_device_uri;
     std::shared_ptr<PapplDevice> m_device;
 
-    std::atomic<EnergyState> m_energy_state;
-    std::atomic<std::chrono::milliseconds::rep> m_delta_time_last_job;
-
 public:
     Printer(PrivateConstructor /* private constructor */, std::string driver_name, std::string device_uri, std::shared_ptr<PapplDevice> device)
-        : m_driver_name(std::move(driver_name)), m_device_uri(std::move(device_uri)), m_device(std::move(device)),
-          m_energy_state(EnergyState::WORKING), m_delta_time_last_job(0)
+        : m_driver_name(std::move(driver_name)), m_device_uri(std::move(device_uri)), m_device(std::move(device))
     {}
 
     ~Printer()
@@ -76,14 +62,11 @@ public:
 
     [[nodiscard]] auto send(std::string_view command) noexcept -> std::expected<void, common::DeviceError>
     {
-        energystate_heartbeat();
         return send_impl(command);
     }
 
     [[nodiscard]] auto send_pjl_cmd(std::string_view command) noexcept -> std::expected<void, common::DeviceError>
     {
-        energystate_heartbeat();
-
         auto result = send_impl(common::UEL);
         if (!result)
         {
@@ -125,37 +108,6 @@ public:
     [[nodiscard]] auto testprint() noexcept -> std::expected<void, common::DeviceError>
     {
         return send_pjl_cmd("EXECUTE TESTPRINT");
-    }
-
-    auto delta_last_job_add_time(std::chrono::milliseconds duration) -> void
-    {
-        m_delta_time_last_job.fetch_add(duration.count(), std::memory_order_relaxed);
-    }
-
-    [[nodiscard]] auto get_delta_last_job() const -> std::chrono::milliseconds
-    {
-        return std::chrono::milliseconds(m_delta_time_last_job.load(std::memory_order_relaxed));
-    }
-
-    auto delta_last_job_reset() -> void
-    {
-        m_delta_time_last_job.store(0, std::memory_order_relaxed);
-    }
-
-    [[nodiscard]] auto get_energystate() noexcept -> EnergyState
-    {
-        return m_energy_state.load(std::memory_order::acquire);
-    }
-
-    auto set_energystate(EnergyState state) -> void
-    {
-        m_energy_state.store(state, std::memory_order::release);
-    }
-
-    auto energystate_heartbeat() -> void
-    {
-        set_energystate(EnergyState::WORKING);
-        delta_last_job_reset();
     }
 
 private:
@@ -217,10 +169,5 @@ private:
         return {};
     }
 };
-
-void test()
-{
-    std::println("Hello from brother_laser::test()");
-}
 
 } // namespace brother_laser
