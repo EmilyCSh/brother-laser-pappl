@@ -10,6 +10,8 @@ on:
 
 env: 
   pappl_ver: "1.4.12"
+  eudev_ver: "3.2.9"
+  eudev_prefix: "/opt/eudev"
   CMAKE_CXX_COMPILER: "clang++-22"
   CLANG_FORMAT_EXE: "/usr/bin/clang-format-22"
   CLANG_TIDY_EXE: "/usr/bin/clang-tidy-22"
@@ -50,8 +52,16 @@ jobs:
           sudo apt-get install -y libavahi-client-dev libavahi-common-dev \
                              libcups2-dev libcupsimage2-dev libgnutls28-dev \
                              libjpeg-dev libkrb5-dev libpam-dev libpng-dev \
-                             libp11-kit-dev libssl-dev libudev-dev \
-                             libunistring-dev libusb-1.0-0-dev zlib1g-dev tar
+                             libp11-kit-dev libssl-dev \
+                             libunistring-dev libusb-1.0-0-dev zlib1g-dev \
+                             autoconf automake libtool gperf tar
+          wget https://github.com/eudev-project/eudev/releases/download/v${{ env.eudev_ver }}/eudev-${{ env.eudev_ver }}.tar.gz
+          tar xf eudev-${{ env.eudev_ver }}.tar.gz
+          cd eudev-${{ env.eudev_ver }}
+          ./configure --prefix=${{ env.eudev_prefix }} --disable-shared --enable-static --disable-manpages
+          make -j"$(nproc)"
+          sudo make install
+          echo "PKG_CONFIG_PATH=${{ env.eudev_prefix }}/lib/pkgconfig:${{ env.eudev_prefix }}/share/pkgconfig:${PKG_CONFIG_PATH}" >> "$GITHUB_ENV"
           wget https://github.com/michaelrsweet/pappl/releases/download/v${{ env.pappl_ver }}/pappl-${{ env.pappl_ver }}.tar.gz
           tar xf pappl-${{ env.pappl_ver }}.tar.gz
           cd pappl-${{ env.pappl_ver }}
