@@ -15,5 +15,4 @@ Checks: >-
 WarningsAsErrors: '*'
 CheckOptions:
   misc-include-cleaner.IgnoreHeaders: '.*/src/.*\.cpp'
-  bugprone-exception-escape.TreatFunctionsWithoutSpecificationAsThrowing: 'OnlyUndefined'
   bugprone-unused-return-value.AllowCastToVoid: 'true'
