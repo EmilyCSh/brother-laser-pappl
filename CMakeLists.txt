@@ -62,7 +62,7 @@ else()
     message(WARNING "clang-tidy is only supported with Clang compiler, skipping static analysis")
 endif()
 
-target_compile_options(brother-laser-pappl PRIVATE -O2 -Wall -Wextra -Werror -Wpedantic)
+target_compile_options(brother-laser-pappl PRIVATE -Wall -Wextra -Werror -Wpedantic)
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     target_compile_options(brother-laser-pappl PRIVATE -Wunsafe-buffer-usage -Wthread-safety)
@@ -79,6 +79,9 @@ endif()
 target_link_libraries(brother-laser-pappl PRIVATE
     ${PAPPL_STATIC_LIBRARIES}
 )
-target_link_directories(brother-laser-pappl PRIVATE ${PAPPL_STATIC_LIBRARY_DIRS})
+
+target_link_directories(brother-laser-pappl PRIVATE
+    ${PAPPL_STATIC_LIBRARY_DIRS}
+)
 target_include_directories(brother-laser-pappl PRIVATE ${PAPPL_INCLUDE_DIRS})
 install(TARGETS brother-laser-pappl DESTINATION bin)

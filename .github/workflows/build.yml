@@ -10,71 +10,62 @@ on:
 
 env: 
   pappl_ver: "1.4.12"
-  eudev_ver: "3.2.14"
-  eudev_prefix: "/opt/eudev"
-  CMAKE_CXX_COMPILER: "clang++-23"
-  CLANG_FORMAT_EXE: "/usr/bin/clang-format-23"
-  CLANG_TIDY_EXE: "/usr/bin/clang-tidy-23"
-  BRANCH_NAME: ${{ github.head_ref || github.ref_name }} 
-  COMMIT_ID: ${{ github.sha }}
+  cups_ver: "2.4.11"
+  cups_prefix: "/opt/cups"
+  build_dir: "build"
+  llvm_ver: "23"
+  CC: "clang-23"
+  CXX: "clang++-23"
+  CFLAGS: "-static"
+  CXXFLAGS: "-static"
+  LDFLAGS: "-static"
+  PATH: "/opt/cups/bin:/usr/lib/ninja-build/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+  PKG_CONFIG_PATH: "/opt/cups/lib/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig"
+  cups_configure: "--disable-shared --enable-static --with-tls=openssl --disable-gssapi --disable-dbus --with-dnssd=no --disable-pam"
+  pappl_configure: "--disable-shared --enable-static --with-dnssd=no --disable-libpam --enable-libusb"
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    container: alpine:edge
     steps:
+      - name: Install Alpine tools
+        run: |
+          apk add --no-cache nodejs npm \
+            alpine-sdk autoconf automake libtool gperf \
+            cmake ninja-build pkgconf clang${{ env.llvm_ver }} clang${{ env.llvm_ver }}-extra-tools \
+            eudev eudev-dev libdaemon-dev expat-dev glib-dev \
+            jpeg-dev libjpeg-turbo-static libpng-dev libpng-static \
+            libusb-dev zlib-dev zlib-static openssl-dev openssl-libs-static \
+            linux-pam-dev linux-headers wget tar xz
       - name: Check out repository code
         uses: actions/checkout@v7
-      - name: Update APT Repositories
+      - name: Build CUPS
         run: |
-          sudo apt-get update -y
-      - name: Install CMake Tools
-        run: |
-          wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | \
-            gpg --dearmor - | sudo tee /usr/share/keyrings/kitware-archive-keyring.gpg >/dev/null
-          echo "deb [signed-by=/usr/share/keyrings/kitware-archive-keyring.gpg] https://apt.kitware.com/ubuntu/ $(lsb_release -cs) main" | \
-            sudo tee /etc/apt/sources.list.d/kitware.list
-          sudo apt-get update -y
-          sudo apt-get install -y cmake ninja-build build-essential
-      - name: Install LLVM Tools
-        run: |
-            wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | \
-            gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.gpg >/dev/null
-            echo "deb [signed-by=/etc/apt/trusted.gpg.d/apt.llvm.org.gpg] http://apt.llvm.org/noble/ llvm-toolchain-noble-23 main
-            deb-src [signed-by=/etc/apt/trusted.gpg.d/apt.llvm.org.gpg] http://apt.llvm.org/noble/ llvm-toolchain-noble-23 main" | \
-            sudo tee /etc/apt/sources.list.d/llvm.list >/dev/null
-            sudo apt-get update -y
-            sudo apt-get install -y libllvm23 llvm-23 llvm-23-runtime \
-                         clang-23 clang-tools-23 clang-23-doc libclang-common-23-dev \
-                         libclang-23-dev libclang1-23 clang-format-23 python3-clang-23 \
-                         clangd-23 clang-tidy-23 lld-23
-      - name: Install Development Libraries
-        run: |
-          sudo apt-get install -y libavahi-client-dev libavahi-common-dev \
-                             libcups2-dev libcupsimage2-dev libgnutls28-dev \
-                             libjpeg-dev libkrb5-dev libpam-dev libpng-dev \
-                             libp11-kit-dev libssl-dev \
-                             libunistring-dev libusb-1.0-0-dev zlib1g-dev \
-                             autoconf automake libtool gperf tar
-          wget https://github.com/eudev-project/eudev/releases/download/v${{ env.eudev_ver }}/eudev-${{ env.eudev_ver }}.tar.gz
-          tar xf eudev-${{ env.eudev_ver }}.tar.gz
-          cd eudev-${{ env.eudev_ver }}
-          ./configure --prefix=${{ env.eudev_prefix }} --disable-shared --enable-static --disable-manpages
+          wget https://github.com/OpenPrinting/cups/releases/download/v${{ env.cups_ver }}/cups-${{ env.cups_ver }}-source.tar.gz
+          tar xf cups-${{ env.cups_ver }}-source.tar.gz
+          cd cups-${{ env.cups_ver }}
+          ./configure --prefix=${{ env.cups_prefix }} ${{ env.cups_configure }}
           make -j"$(nproc)"
-          sudo make install
-          echo "PKG_CONFIG_PATH=${{ env.eudev_prefix }}/lib/pkgconfig:${{ env.eudev_prefix }}/share/pkgconfig:${PKG_CONFIG_PATH}" >> "$GITHUB_ENV"
+          make install
+      - name: Build PAPPL
+        run: |
           wget https://github.com/michaelrsweet/pappl/releases/download/v${{ env.pappl_ver }}/pappl-${{ env.pappl_ver }}.tar.gz
           tar xf pappl-${{ env.pappl_ver }}.tar.gz
           cd pappl-${{ env.pappl_ver }}
-          ./configure
-          make
-          sudo make install
-      - name: Setup CMake Environment
+          ./configure ${{ env.pappl_configure }}
+          make -C pappl -j"$(nproc)"
+          make -C pappl install
+      - name: Build application
         run: |
-          cmake -G Ninja -Bbuild -DCMAKE_CXX_COMPILER=${{ env.CMAKE_CXX_COMPILER }} -DCMAKE_EXE_LINKER_FLAGS="-static -L${{ env.eudev_prefix }}/lib" -DCLANG_FORMAT_EXE=${{ env.CLANG_FORMAT_EXE }} -DCLANG_TIDY_EXE=${{ env.CLANG_TIDY_EXE }} .
-      - name : CMake Build
-        run: |
-          cmake --build build
+          cmake -G Ninja -B ${{ env.build_dir }} \
+            -DCMAKE_CXX_COMPILER=${{ env.CXX }} \
+            -DCMAKE_CXX_CLANG_TIDY= \
+            -DCMAKE_EXE_LINKER_FLAGS="${{ env.LDFLAGS }} -L${{ env.cups_prefix }}/lib" \
+            -DCLANG_FORMAT_EXE=/usr/lib/llvm${{ env.llvm_ver }}/bin/clang-format \
+            -DCLANG_TIDY_EXE=/usr/lib/llvm${{ env.llvm_ver }}/bin/clang-tidy .
+          cmake --build ${{ env.build_dir }}
       - uses: actions/upload-artifact@v7
         with:
-          name: brother-laser-pappl_${{ env.BRANCH_NAME }}-${{ env.COMMIT_ID }}
-          path: build/brother-laser-pappl
+          name: brother-laser-pappl_${{ github.head_ref || github.ref_name }}-${{ github.sha }}
+          path: ${{ env.build_dir }}/brother-laser-pappl
