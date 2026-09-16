@@ -1,9 +1,7 @@
 module;
-#include <atomic>
-#include <chrono>
-#include <print>
 #include <string>
 #include <cstddef>
+#include <future>
 #include <string_view>
 #include <memory>
 #include <utility>
@@ -11,19 +9,13 @@ module;
 export module brother_laser.printer;
 import brother_laser.common;
 import brother_laser.pappl;
+import brother_laser.printer_worker;
 
 export namespace brother_laser {
 
 
 class Printer
 {
-    enum class EnergyState
-    {
-        WORKING,
-        IDLE,
-        SLEEP,
-    };
-
 private:
     struct PrivateConstructor
     {
@@ -33,14 +25,16 @@ private:
     std::string m_driver_name;
     std::string m_device_uri;
     std::shared_ptr<PapplDevice> m_device;
-
-    std::atomic<EnergyState> m_energy_state;
-    std::atomic<std::chrono::milliseconds::rep> m_delta_time_last_job;
+    PrinterWorker m_worker;
 
 public:
-    Printer(PrivateConstructor /* private constructor */, std::string driver_name, std::string device_uri, std::shared_ptr<PapplDevice> device)
+    Printer(
+        PrivateConstructor /* private constructor */,
+        std::string driver_name,
+        std::string device_uri,
+        std::shared_ptr<PapplDevice> device)
         : m_driver_name(std::move(driver_name)), m_device_uri(std::move(device_uri)), m_device(std::move(device)),
-          m_energy_state(EnergyState::WORKING), m_delta_time_last_job(0)
+          m_worker(m_device)
     {}
 
     ~Printer()
@@ -76,50 +70,64 @@ public:
 
     [[nodiscard]] auto send(std::string_view command) noexcept -> std::expected<void, common::DeviceError>
     {
-        energystate_heartbeat();
-        return send_impl(command);
+        auto command_copy = std::string(command);
+
+        return m_worker
+            .submit(
+                [command = std::move(command_copy)](PapplDevice& device) -> std::expected<void, common::DeviceError> {
+                    return device.write_all(command);
+                })
+            .get();
     }
 
     [[nodiscard]] auto send_pjl_cmd(std::string_view command) noexcept -> std::expected<void, common::DeviceError>
     {
-        energystate_heartbeat();
+        return m_worker.submit(pjl_command(command)).get();
+    }
 
-        auto result = send_impl(common::UEL);
-        if (!result)
-        {
-            return std::unexpected(result.error());
-        }
+    [[nodiscard]] static auto pjl_command(std::string_view command) -> PrinterWorker::Job
+    {
+        auto command_copy = std::string(command);
 
-        result = send_impl(common::PJL_PRE);
-        if (!result)
-        {
-            return std::unexpected(result.error());
-        }
+        return [command = std::move(command_copy)](PapplDevice& device) -> std::expected<void, common::DeviceError> {
+            auto result = device.write_all(common::UEL);
+            if (result)
+            {
+                result = device.write_all(common::PJL_PRE);
+            }
+            if (result)
+            {
+                result = device.write_all(" ");
+            }
+            if (result)
+            {
+                result = device.write_all(command);
+            }
+            if (result)
+            {
+                result = device.write_all(common::CRLF);
+            }
+            if (result)
+            {
+                result = device.write_all(common::UEL);
+            }
 
-        result = send_impl(" ");
-        if (!result)
-        {
-            return std::unexpected(result.error());
-        }
-
-        result = send_impl(command);
-        if (!result)
-        {
-            return std::unexpected(result.error());
-        }
-
-        result = send_impl(common::CRLF);
-        if (!result)
-        {
-            return std::unexpected(result.error());
-        }
-
-        return {};
+            return result;
+        };
     }
 
     [[nodiscard]] auto receive_string(size_t output_len) -> std::expected<std::string, common::DeviceError>
     {
-        return m_device->read_string(output_len);
+        auto promise = std::make_shared<std::promise<std::expected<std::string, common::DeviceError>>>();
+        auto result  = promise->get_future();
+
+        static_cast<void>(
+            m_worker.submit([output_len, promise](PapplDevice& device) -> std::expected<void, common::DeviceError> {
+                promise->set_value(device.read_string(output_len));
+                return std::expected<void, common::DeviceError> {};
+            }));
+
+        return result.get();
     }
 
     [[nodiscard]] auto testprint() noexcept -> std::expected<void, common::DeviceError>
@@ -127,65 +135,16 @@ public:
         return send_pjl_cmd("EXECUTE TESTPRINT");
     }
 
-    auto delta_last_job_add_time(std::chrono::milliseconds duration) -> void
-    {
-        m_delta_time_last_job.fetch_add(duration.count(), std::memory_order_relaxed);
-    }
-
-    [[nodiscard]] auto get_delta_last_job() const -> std::chrono::milliseconds
-    {
-        return std::chrono::milliseconds(m_delta_time_last_job.load(std::memory_order_relaxed));
-    }
-
-    auto delta_last_job_reset() -> void
-    {
-        m_delta_time_last_job.store(0, std::memory_order_relaxed);
-    }
-
-    [[nodiscard]] auto get_energystate() noexcept -> EnergyState
-    {
-        return m_energy_state.load(std::memory_order::acquire);
-    }
-
-    auto set_energystate(EnergyState state) -> void
-    {
-        m_energy_state.store(state, std::memory_order::release);
-    }
-
-    auto energystate_heartbeat() -> void
-    {
-        set_energystate(EnergyState::WORKING);
-        delta_last_job_reset();
-    }
-
 private:
-    [[nodiscard]] auto send_impl(std::string_view command) noexcept -> std::expected<void, common::DeviceError>
-    {
-        return m_device->write_all(command);
-    }
-
     [[nodiscard]] auto reset() noexcept -> std::expected<void, common::DeviceError>
     {
         /* Ensure printer is really reset */
-        auto result = send_pjl_cmd("RESET");
-        if (!result)
-        {
-            return std::unexpected(result.error());
-        }
-
-        result = send_pjl_cmd("USTATUSOFF");
-        if (!result)
-        {
-            return std::unexpected(result.error());
-        }
-
-        result = send(common::UEL);
-        if (!result)
-        {
-            return std::unexpected(result.error());
-        }
-
-        return {};
+        return m_worker
+            .submit_many({
+                pjl_command("RESET"),
+                pjl_command("USTATUSOFF"),
+            })
+            .get();
     }
 
     [[nodiscard]] auto init() -> std::expected<void, common::DeviceError>
@@ -196,31 +155,14 @@ private:
             return std::unexpected(result.error());
         }
 
-        result = send_pjl_cmd("USTATUS DEVICE=VERBOSE");
-        if (!result)
-        {
-            return std::unexpected(result.error());
-        }
-
-        result = send_pjl_cmd("USTATUS JOB=ON");
-        if (!result)
-        {
-            return std::unexpected(result.error());
-        }
-
-        result = send_pjl_cmd("USTATUS PAGE=ON");
-        if (!result)
-        {
-            return std::unexpected(result.error());
-        }
-
-        return {};
+        return m_worker
+            .submit_many({
+                pjl_command("USTATUS DEVICE=VERBOSE"),
+                pjl_command("USTATUS JOB=ON"),
+                pjl_command("USTATUS PAGE=ON"),
+            })
+            .get();
     }
 };
-
-void test()
-{
-    std::println("Hello from brother_laser::test()");
-}
 
 } // namespace brother_laser
