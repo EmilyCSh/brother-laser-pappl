@@ -9,12 +9,12 @@ AlignConsecutiveMacros: true
 AlignEscapedNewlines: Left
 AlignOperands: Align
 AlignTrailingComments: true
-AllowAllArgumentsOnNextLine: true
+AllowAllArgumentsOnNextLine: false
 AllowAllConstructorInitializersOnNextLine: true
 AllowAllParametersOfDeclarationOnNextLine: true
-AllowShortBlocksOnASingleLine: Empty
+AllowShortBlocksOnASingleLine: Never
 AllowShortCaseLabelsOnASingleLine: false
-AllowShortLambdasOnASingleLine: All
+AllowShortLambdasOnASingleLine: None
 AllowShortFunctionsOnASingleLine: None
 AllowShortLoopsOnASingleLine: false
 AlwaysBreakAfterDefinitionReturnType: None
@@ -40,7 +40,7 @@ BraceWrapping:
   SplitEmptyFunction: false
   SplitEmptyRecord: false
   SplitEmptyNamespace: false
-  BeforeLambdaBody: true
+  BeforeLambdaBody: false
   BeforeWhile: false
 BreakBeforeBinaryOperators: NonAssignment
 BreakBeforeBraces: Custom
@@ -49,7 +49,8 @@ BreakBeforeTernaryOperators: true
 BreakConstructorInitializers: BeforeColon
 BreakStringLiterals: true
 #ColumnLimit can be modified to suit the project this clang-format applies to.
-ColumnLimit: 150
+ColumnLimit: 120
+PenaltyBreakBeforeFirstCallParameter: 0
 CompactNamespaces: false
 ConstructorInitializerAllOnOneLineOrOnePerLine: false
 ConstructorInitializerIndentWidth : 4
