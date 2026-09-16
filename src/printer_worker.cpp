@@ -66,8 +66,8 @@ public:
 
     [[nodiscard]] auto submit(Job job) -> std::future<std::expected<void, common::DeviceError>>
     {
-        auto promise = std::make_shared<std::promise<std::expected<void, common::DeviceError>>>();
-        auto result  = promise->get_future();
+        const auto promise = std::make_shared<std::promise<std::expected<void, common::DeviceError>>>();
+        auto result        = promise->get_future();
 
         enqueue([job = std::move(job), promise](PapplDevice& device) -> void {
             promise->set_value(job(device));
@@ -78,8 +78,8 @@ public:
 
     [[nodiscard]] auto submit_many(std::vector<Job> jobs) -> std::future<std::expected<void, common::DeviceError>>
     {
-        auto promise = std::make_shared<std::promise<std::expected<void, common::DeviceError>>>();
-        auto result  = promise->get_future();
+        const auto promise = std::make_shared<std::promise<std::expected<void, common::DeviceError>>>();
+        auto result        = promise->get_future();
 
         if (jobs.empty())
         {
@@ -90,7 +90,7 @@ public:
         enqueue([jobs = std::move(jobs), promise](PapplDevice& device) -> void {
             for (const auto& job : jobs)
             {
-                auto job_result = job(device);
+                const auto job_result = job(device);
                 if (!job_result)
                 {
                     promise->set_value(job_result);
@@ -181,7 +181,7 @@ private:
 
             if (!m_jobs.empty())
             {
-                auto job = std::move(m_jobs.front());
+                const auto job = std::move(m_jobs.front());
                 m_jobs.pop();
 
                 m_energy_state      = EnergyState::WORKING;
