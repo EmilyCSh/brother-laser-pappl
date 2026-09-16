@@ -10,7 +10,7 @@ on:
 
 env: 
   pappl_ver: "1.4.12"
-  eudev_ver: "3.2.9"
+  eudev_ver: "3.2.14"
   eudev_prefix: "/opt/eudev"
   CMAKE_CXX_COMPILER: "clang++-23"
   CLANG_FORMAT_EXE: "/usr/bin/clang-format-23"
