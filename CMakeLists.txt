@@ -79,5 +79,6 @@ endif()
 target_link_libraries(brother-laser-pappl PRIVATE
     ${PAPPL_STATIC_LIBRARIES}
 )
+target_link_directories(brother-laser-pappl PRIVATE ${PAPPL_STATIC_LIBRARY_DIRS})
 target_include_directories(brother-laser-pappl PRIVATE ${PAPPL_INCLUDE_DIRS})
 install(TARGETS brother-laser-pappl DESTINATION bin)
