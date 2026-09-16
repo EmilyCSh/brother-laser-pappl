@@ -33,7 +33,7 @@ private:
     std::mutex m_mutex;
 
 public:
-    PapplDevice(PrivateConstructor /* private constructor */, pappl_device_t* pappl_device)
+    PapplDevice(PrivateConstructor /* private constructor */, pappl_device_t* pappl_device [[clang::lifetimebound]])
         : m_pappl_device(pappl_device)
     {}
 

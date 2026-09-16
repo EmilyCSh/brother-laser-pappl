@@ -125,8 +125,8 @@ public:
 
     [[nodiscard]] auto receive_string(size_t output_len) -> std::expected<std::string, common::DeviceError>
     {
-        auto promise = std::make_shared<std::promise<std::expected<std::string, common::DeviceError>>>();
-        auto result  = promise->get_future();
+        const auto promise = std::make_shared<std::promise<std::expected<std::string, common::DeviceError>>>();
+        auto result        = promise->get_future();
 
         static_cast<void>(
             m_worker.submit([output_len, promise](PapplDevice& device) -> std::expected<void, common::DeviceError> {
