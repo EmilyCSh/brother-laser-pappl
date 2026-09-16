@@ -24,6 +24,7 @@ set(SOURCES
 set(MODULE_SOURCES
     src/common.cpp
     src/pappl.cpp
+    src/printer_worker.cpp
     src/printer.cpp
 )
 

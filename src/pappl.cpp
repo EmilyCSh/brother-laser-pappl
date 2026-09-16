@@ -33,7 +33,8 @@ private:
     std::mutex m_mutex;
 
 public:
-    PapplDevice(PrivateConstructor /* private constructor */, pappl_device_t* pappl_device) : m_pappl_device(pappl_device)
+    PapplDevice(PrivateConstructor /* private constructor */, pappl_device_t* pappl_device)
+        : m_pappl_device(pappl_device)
     {}
 
     PapplDevice(const PapplDevice&)               = delete;
@@ -96,13 +97,15 @@ public:
         return write_all(std::as_bytes(std::span(buffer)));
     }
 
-    [[nodiscard]] auto read(std::span<std::byte> buffer) noexcept -> std::expected<std::span<std::byte>, common::DeviceError>
+    [[nodiscard]] auto read(std::span<std::byte> buffer) noexcept
+        -> std::expected<std::span<std::byte>, common::DeviceError>
     {
         const std::scoped_lock<std::mutex> lock(m_mutex);
         return read_impl(buffer);
     }
 
-    [[nodiscard]] auto read_all(std::span<std::byte> buffer) noexcept -> std::expected<std::span<std::byte>, common::DeviceError>
+    [[nodiscard]] auto read_all(std::span<std::byte> buffer) noexcept
+        -> std::expected<std::span<std::byte>, common::DeviceError>
     {
         size_t total_bytes_read = 0;
         {
@@ -148,7 +151,8 @@ public:
     }
 
 private:
-    [[nodiscard]] auto write_impl(std::span<const std::byte> buffer) noexcept -> std::expected<size_t, common::DeviceError>
+    [[nodiscard]] auto write_impl(std::span<const std::byte> buffer) noexcept
+        -> std::expected<size_t, common::DeviceError>
     {
         const auto bytes_written = papplDeviceWrite(m_pappl_device, buffer.data(), buffer.size());
 
@@ -160,7 +164,8 @@ private:
         return static_cast<size_t>(bytes_written);
     }
 
-    [[nodiscard]] auto read_impl(std::span<std::byte> buffer) noexcept -> std::expected<std::span<std::byte>, common::DeviceError>
+    [[nodiscard]] auto read_impl(std::span<std::byte> buffer) noexcept
+        -> std::expected<std::span<std::byte>, common::DeviceError>
     {
         const auto bytes_read = papplDeviceRead(m_pappl_device, buffer.data(), buffer.size());
         if (bytes_read < 0)
