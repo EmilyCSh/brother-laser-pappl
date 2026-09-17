@@ -12,58 +12,21 @@ on:
     paths-ignore:
       - "docker/**"
     
-
 env: 
-  pappl_ver: "1.4.12"
-  CMAKE_CXX_COMPILER: "clang++-23"
-  CLANG_FORMAT_EXE: "/usr/bin/clang-format-23"
-  CLANG_TIDY_EXE: "/usr/bin/clang-tidy-23"
   BRANCH_NAME: ${{ github.head_ref || github.ref_name }} 
   COMMIT_ID: ${{ github.sha }}
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/emilycsh/brother-laser-pappl_build:sha-1f10156bb0bd61eff42d49d7bd8c2b9ae1d71d8a
     steps:
       - name: Check out repository code
         uses: actions/checkout@v7
-      - name: Update APT Repositories
-        run: |
-          sudo apt-get update -y
-      - name: Install CMake Tools
-        run: |
-          wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | \
-            gpg --dearmor - | sudo tee /usr/share/keyrings/kitware-archive-keyring.gpg >/dev/null
-          echo "deb [signed-by=/usr/share/keyrings/kitware-archive-keyring.gpg] https://apt.kitware.com/ubuntu/ $(lsb_release -cs) main" | \
-            sudo tee /etc/apt/sources.list.d/kitware.list
-          sudo apt-get update -y
-          sudo apt-get install -y cmake ninja-build build-essential
-      - name: Install LLVM Tools
-        run: |
-            wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | \
-            gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.gpg >/dev/null
-            echo "deb [signed-by=/etc/apt/trusted.gpg.d/apt.llvm.org.gpg] http://apt.llvm.org/noble/ llvm-toolchain-noble-23 main
-            deb-src [signed-by=/etc/apt/trusted.gpg.d/apt.llvm.org.gpg] http://apt.llvm.org/noble/ llvm-toolchain-noble-23 main" | \
-            sudo tee /etc/apt/sources.list.d/llvm.list >/dev/null
-            sudo apt-get update -y
-            sudo apt-get install -y libllvm23 llvm-23 llvm-23-runtime \
-                         clang-23 clang-tools-23 clang-23-doc libclang-common-23-dev \
-                         libclang-23-dev libclang1-23 clang-format-23 python3-clang-23 \
-                         clangd-23 clang-tidy-23 lld-23
-      - name: Install Development Libraries
-        run: |
-          sudo apt-get install -y libavahi-client-dev libcups2-dev libcupsimage2-dev \
-                             libgnutls28-dev libjpeg-dev libpam-dev libpng-dev \
-                             libusb-1.0-0-dev zlib1g-dev tar
-          wget https://github.com/michaelrsweet/pappl/releases/download/v${{ env.pappl_ver }}/pappl-${{ env.pappl_ver }}.tar.gz
-          tar xf pappl-${{ env.pappl_ver }}.tar.gz
-          cd pappl-${{ env.pappl_ver }}
-          ./configure
-          make
-          sudo make install
       - name: Setup CMake Environment
         run: |
-          cmake -G Ninja -Bbuild -DCMAKE_CXX_COMPILER=${{ env.CMAKE_CXX_COMPILER }} -DCLANG_FORMAT_EXE=${{ env.CLANG_FORMAT_EXE }} -DCLANG_TIDY_EXE=${{ env.CLANG_TIDY_EXE }} .
+          cmake -G Ninja -Bbuild -DLINK_STATIC_PAPPL=ON -DLINK_EXPLICIT_LIBC++=ON .
       - name : CMake Build
         run: |
           cmake --build build
