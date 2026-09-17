@@ -20,7 +20,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/emilycsh/brother-laser-pappl_build:sha-1f10156bb0bd61eff42d49d7bd8c2b9ae1d71d8a
+      image: ghcr.io/emilycsh/brother-laser-pappl_build:sha-3d30a7bba6156d7eb1f682e347158e8047ec291a
     steps:
       - name: Check out repository code
         uses: actions/checkout@v7
