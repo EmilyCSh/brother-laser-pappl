@@ -46,7 +46,14 @@ public:
 
     ~Printer()
     {
-        static_cast<void>(reset());
+        try
+        {
+            static_cast<void>(reset());
+        }
+        catch (...)
+        {
+            return;
+        }
     }
 
     Printer(const Printer&)                    = delete;
@@ -75,7 +82,7 @@ public:
         return printer;
     }
 
-    [[nodiscard]] auto send(std::string_view command) noexcept -> std::expected<void, common::DeviceError>
+    [[nodiscard]] auto send(std::string_view command) -> std::expected<void, common::DeviceError>
     {
         auto command_copy = std::string(command);
 
@@ -87,7 +94,7 @@ public:
             .get();
     }
 
-    [[nodiscard]] auto send_pjl_cmd(std::string_view command) noexcept -> std::expected<void, common::DeviceError>
+    [[nodiscard]] auto send_pjl_cmd(std::string_view command) -> std::expected<void, common::DeviceError>
     {
         return m_worker.submit(pjl_command(command)).get();
     }
@@ -137,13 +144,13 @@ public:
         return result.get();
     }
 
-    [[nodiscard]] auto testprint() noexcept -> std::expected<void, common::DeviceError>
+    [[nodiscard]] auto testprint() -> std::expected<void, common::DeviceError>
     {
         return send_pjl_cmd("EXECUTE TESTPRINT");
     }
 
 private:
-    [[nodiscard]] auto reset() noexcept -> std::expected<void, common::DeviceError>
+    [[nodiscard]] auto reset() -> std::expected<void, common::DeviceError>
     {
         /* Ensure printer is really reset */
         return m_worker
