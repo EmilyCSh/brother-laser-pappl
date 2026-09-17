@@ -4,9 +4,14 @@ on:
   pull_request:
     branches:
       - "master"
+    paths-ignore:
+      - "docker/**"
   push:
     branches:
       - "master"
+    paths-ignore:
+      - "docker/**"
+    
 
 env: 
   pappl_ver: "1.4.12"
