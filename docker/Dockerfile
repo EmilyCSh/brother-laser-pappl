@@ -33,13 +33,14 @@ RUN apk add --no-cache \
     tar \
     xz \
     libc++-dev \
-    libc++-static
+    libc++-static \
+    mimalloc3-dev
 
 ENV CC=clang-${LLVM_VERSION}
 ENV CXX=clang++-${LLVM_VERSION}
 ENV CFLAGS="-static"
 ENV CXXFLAGS="-static"
-ENV LDFLAGS="-static -fuse-ld=lld"
+ENV LDFLAGS="-static -fuse-ld=lld -Wl,--whole-archive -lmimalloc -Wl,--no-whole-archive"
 
 RUN wget https://github.com/OpenPrinting/cups/releases/download/v${CUPS_VERSION}/cups-${CUPS_VERSION}-source.tar.gz && \
     tar -xzf cups-${CUPS_VERSION}-source.tar.gz && \
@@ -55,9 +56,9 @@ RUN wget https://github.com/michaelrsweet/pappl/releases/download/v${PAPPL_VERSI
     tar -xzf pappl-${PAPPL_VERSION}.tar.gz && \
     rm pappl-${PAPPL_VERSION}.tar.gz && \
     cd pappl-${PAPPL_VERSION} && \
-    ./configure --prefix=/usr --disable-shared --enable-static --disable-libpam --enable-libusb --enable-libjpeg --enable-libpng --with-ldflags="$LDFLAGS -lz" && \
-    make -j"$(nproc)" && \
-    make install && \
+    ./configure --prefix=/usr --disable-shared --enable-static --disable-libpam --enable-libusb --enable-libjpeg --enable-libpng && \
+    make -C pappl -j"$(nproc)" && \
+    make -C pappl install && \
     cd .. && \
     rm -rf pappl-${PAPPL_VERSION}
 
