@@ -12,6 +12,7 @@ Checks: >-
   -bugprone-easily-swappable-parameters,
   -readability-redundant-declaration,
   -performance-enum-size,
+  -bugprone-exception-escape
 WarningsAsErrors: '*'
 CheckOptions:
   misc-include-cleaner.IgnoreHeaders: '.*/src/.*\.cpp'

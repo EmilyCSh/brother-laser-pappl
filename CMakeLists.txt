@@ -5,10 +5,26 @@ set(CMAKE_CXX_STANDARD 26)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+option(LINK_STATIC_PAPPL "Link against the static version of PAPPL" OFF)
+
+if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    option(LINK_EXPLICIT_LIBC++ "Link (forced) LLVM libc++" OFF)
+endif()
+
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(PAPPL REQUIRED pappl)
 find_program(CLANG_TIDY_EXE NAMES clang-tidy)
 find_program(CLANG_FORMAT_EXE NAMES clang-format)
+
+if (LINK_EXPLICIT_LIBC++)
+    if (LINK_STATIC_PAPPL)
+        find_library(LIBC++ NAMES libc++.a libc++ c++ REQUIRED)
+        find_library(LIBC++ABI NAMES libc++abi.a libc++abi c++abi REQUIRED)
+    else()
+        find_library(LIBC++ NAMES libc++.so libc++ REQUIRED)
+        find_library(LIBC++ABI NAMES libc++abi.so libc++abi c++abi REQUIRED)
+    endif()
+endif()
 
 set(SOURCES
     src/main.cpp
@@ -72,16 +88,19 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     endif()
 endif()
 
-if (NOT PAPPL_STATIC_LIBRARIES)
-    message(FATAL_ERROR "pkg-config did not provide PAPPL static link dependencies")
+if (LINK_STATIC_PAPPL)
+    target_link_libraries(brother-laser-pappl PRIVATE ${PAPPL_STATIC_LIBRARIES})
+    target_link_directories(brother-laser-pappl PRIVATE ${PAPPL_STATIC_LIBRARY_DIRS})
+    target_include_directories(brother-laser-pappl PRIVATE ${PAPPL_STATIC_INCLUDE_DIRS})
+else()
+    target_link_libraries(brother-laser-pappl PRIVATE ${PAPPL_LIBRARIES})
+    target_link_directories(brother-laser-pappl PRIVATE ${PAPPL_LIBRARY_DIRS})
+    target_include_directories(brother-laser-pappl PRIVATE ${PAPPL_INCLUDE_DIRS})
 endif()
 
-target_link_libraries(brother-laser-pappl PRIVATE
-    ${PAPPL_STATIC_LIBRARIES}
-)
+if (LINK_EXPLICIT_LIBC++)
+    target_compile_options(brother-laser-pappl PRIVATE -stdlib=libc++)
+    target_link_libraries(brother-laser-pappl PRIVATE ${LIBC++} ${LIBC++ABI})
+endif()
 
-target_link_directories(brother-laser-pappl PRIVATE
-    ${PAPPL_STATIC_LIBRARY_DIRS}
-)
-target_include_directories(brother-laser-pappl PRIVATE ${PAPPL_INCLUDE_DIRS})
 install(TARGETS brother-laser-pappl DESTINATION bin)

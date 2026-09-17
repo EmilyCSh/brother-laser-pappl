@@ -9,63 +9,52 @@ on:
       - "master"
 
 env: 
-  pappl_ver: "1.4.12"
-  cups_ver: "2.4.11"
-  cups_prefix: "/opt/cups"
-  build_dir: "build"
-  llvm_ver: "23"
-  CC: "clang-23"
-  CXX: "clang++-23"
-  CFLAGS: "-static"
-  CXXFLAGS: "-static"
-  LDFLAGS: "-static"
-  PATH: "/opt/cups/bin:/usr/lib/ninja-build/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-  PKG_CONFIG_PATH: "/opt/cups/lib/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig"
-  cups_configure: "--disable-shared --enable-static --with-tls=openssl --disable-gssapi --disable-dbus --with-dnssd=no --disable-pam"
-  pappl_configure: "--disable-shared --enable-static --with-dnssd=no --disable-libpam --enable-libusb"
+  LLVM_VERSION: "23"
+  CUPS_VERSION: "2.4.19"
+  PAPPL_VERSION: "1.4.12"
+  BRANCH_NAME: ${{ github.head_ref || github.ref_name }} 
+  COMMIT_ID: ${{ github.sha }}
+  REGISTRY: ghcr.io
 
 jobs:
-  build:
+  docker:
     runs-on: ubuntu-latest
-    container: alpine:edge
+
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
+
     steps:
-      - name: Install Alpine tools
-        run: |
-          apk add --no-cache nodejs npm \
-            alpine-sdk autoconf automake libtool gperf \
-            cmake ninja-build pkgconf clang${{ env.llvm_ver }} clang${{ env.llvm_ver }}-extra-tools \
-            eudev eudev-dev libdaemon-dev expat-dev glib-dev \
-            jpeg-dev libjpeg-turbo-static libpng-dev libpng-static \
-            libusb-dev zlib-dev zlib-static openssl-dev openssl-libs-static \
-            linux-pam-dev linux-headers wget tar xz
       - name: Check out repository code
         uses: actions/checkout@v7
-      - name: Build CUPS
-        run: |
-          wget https://github.com/OpenPrinting/cups/releases/download/v${{ env.cups_ver }}/cups-${{ env.cups_ver }}-source.tar.gz
-          tar xf cups-${{ env.cups_ver }}-source.tar.gz
-          cd cups-${{ env.cups_ver }}
-          ./configure --prefix=${{ env.cups_prefix }} ${{ env.cups_configure }}
-          make -j"$(nproc)"
-          make install
-      - name: Build PAPPL
-        run: |
-          wget https://github.com/michaelrsweet/pappl/releases/download/v${{ env.pappl_ver }}/pappl-${{ env.pappl_ver }}.tar.gz
-          tar xf pappl-${{ env.pappl_ver }}.tar.gz
-          cd pappl-${{ env.pappl_ver }}
-          ./configure ${{ env.pappl_configure }}
-          make -C pappl -j"$(nproc)"
-          make -C pappl install
-      - name: Build application
-        run: |
-          cmake -G Ninja -B ${{ env.build_dir }} \
-            -DCMAKE_CXX_COMPILER=${{ env.CXX }} \
-            -DCMAKE_CXX_CLANG_TIDY= \
-            -DCMAKE_EXE_LINKER_FLAGS="${{ env.LDFLAGS }} -L${{ env.cups_prefix }}/lib" \
-            -DCLANG_FORMAT_EXE=/usr/lib/llvm${{ env.llvm_ver }}/bin/clang-format \
-            -DCLANG_TIDY_EXE=/usr/lib/llvm${{ env.llvm_ver }}/bin/clang-tidy .
-          cmake --build ${{ env.build_dir }}
-      - uses: actions/upload-artifact@v7
+      - name: Log in to the Container registry
+        uses: docker/login-action@v4
         with:
-          name: brother-laser-pappl_${{ github.head_ref || github.ref_name }}-${{ github.sha }}
-          path: ${{ env.build_dir }}/brother-laser-pappl
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository }}_build
+      - name: Build and push Docker image
+        id: push
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            LLVM_VERSION=${{ env.LLVM_VERSION }}
+            CUPS_VERSION=${{ env.CUPS_VERSION }}
+            PAPPL_VERSION=${{ env.PAPPL_VERSION }}
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v7
