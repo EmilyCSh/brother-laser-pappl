@@ -31,8 +31,8 @@ public:
     constexpr static auto IDLE_SLEEP_TIME    = std::chrono::milliseconds(100);
     constexpr static auto SLEEP_SLEEP_TIME   = std::chrono::seconds(1);
 
-    constexpr static auto IDLE_TRANSITION_TIME  = std::chrono::minutes(1);
-    constexpr static auto SLEEP_TRANSITION_TIME = std::chrono::seconds(10);
+    constexpr static auto IDLE_TRANSITION_TIME  = std::chrono::seconds(10);
+    constexpr static auto SLEEP_TRANSITION_TIME = std::chrono::minutes(1);
 
     enum class EnergyState
     {
