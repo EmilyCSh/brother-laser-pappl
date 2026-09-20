@@ -78,7 +78,7 @@ public:
 
         if (jobs.empty())
         {
-            promise->set_value(std::expected<void, common::DeviceError> {});
+            promise->set_value({});
             return result;
         }
 
@@ -93,7 +93,7 @@ public:
                 }
             }
 
-            promise->set_value(std::expected<void, common::DeviceError> {});
+            promise->set_value({});
         });
 
         return result;
