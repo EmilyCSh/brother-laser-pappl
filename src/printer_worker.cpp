@@ -71,19 +71,7 @@ public:
     PrinterWorker(PrinterWorker&&)                         = delete;
     auto operator=(PrinterWorker&&) -> PrinterWorker&      = delete;
 
-    [[nodiscard]] auto submit(Job job) -> std::future<std::expected<void, common::DeviceError>>
-    {
-        const auto promise = std::make_shared<std::promise<std::expected<void, common::DeviceError>>>();
-        auto result        = promise->get_future();
-
-        enqueue([job = std::move(job), promise](PapplDevice& device) -> void {
-            promise->set_value(job(device));
-        });
-
-        return result;
-    }
-
-    [[nodiscard]] auto submit_many(std::vector<Job> jobs) -> std::future<std::expected<void, common::DeviceError>>
+    [[nodiscard]] auto submit(std::vector<Job> jobs) -> std::future<std::expected<void, common::DeviceError>>
     {
         const auto promise = std::make_shared<std::promise<std::expected<void, common::DeviceError>>>();
         auto result        = promise->get_future();

@@ -87,16 +87,17 @@ public:
         auto command_copy = std::string(command);
 
         return m_worker
-            .submit(
+            .submit({
                 [command = std::move(command_copy)](PapplDevice& device) -> std::expected<void, common::DeviceError> {
                     return device.write_all(command);
-                })
+                },
+            })
             .get();
     }
 
     [[nodiscard]] auto send_pjl_cmd(std::string_view command) -> std::expected<void, common::DeviceError>
     {
-        return m_worker.submit(pjl_command(command)).get();
+        return m_worker.submit({pjl_command(command)}).get();
     }
 
     [[nodiscard]] static auto pjl_command(std::string_view command) -> PrinterWorker::Job
@@ -135,11 +136,12 @@ public:
         const auto promise = std::make_shared<std::promise<std::expected<std::string, common::DeviceError>>>();
         auto result        = promise->get_future();
 
-        static_cast<void>(
-            m_worker.submit([output_len, promise](PapplDevice& device) -> std::expected<void, common::DeviceError> {
+        static_cast<void>(m_worker.submit({
+            [output_len, promise](PapplDevice& device) -> std::expected<void, common::DeviceError> {
                 promise->set_value(device.read_string(output_len));
                 return std::expected<void, common::DeviceError> {};
-            }));
+            },
+        }));
 
         return result.get();
     }
@@ -154,7 +156,7 @@ private:
     {
         /* Ensure printer is really reset */
         return m_worker
-            .submit_many({
+            .submit({
                 pjl_command("RESET"),
                 pjl_command("USTATUSOFF"),
             })
@@ -170,7 +172,7 @@ private:
         }
 
         return m_worker
-            .submit_many({
+            .submit({
                 pjl_command("USTATUS DEVICE=VERBOSE"),
                 pjl_command("USTATUS JOB=ON"),
                 pjl_command("USTATUS PAGE=ON"),
