@@ -40,8 +40,7 @@ public:
         std::string driver_name,
         std::string device_uri,
         std::shared_ptr<PapplDevice> device)
-        : m_driver_name(std::move(driver_name)), m_device_uri(std::move(device_uri)), m_device(std::move(device)),
-          m_worker(m_device)
+        : m_driver_name(std::move(driver_name)), m_device_uri(std::move(device_uri)), m_device(std::move(device))
     {}
 
     ~Printer()
@@ -88,8 +87,8 @@ public:
 
         return m_worker
             .submit({
-                [command = std::move(command_copy)](PapplDevice& device) -> std::expected<void, common::DeviceError> {
-                    return device.write_all(command);
+                [device = m_device, command = std::move(command_copy)] -> std::expected<void, common::DeviceError> {
+                    return device->write_all(command);
                 },
             })
             .get();
@@ -97,34 +96,36 @@ public:
 
     [[nodiscard]] auto send_pjl_cmd(std::string_view command) -> std::expected<void, common::DeviceError>
     {
-        return m_worker.submit({pjl_command(command)}).get();
+        return m_worker.submit({pjl_command(m_device, command)}).get();
     }
 
-    [[nodiscard]] static auto pjl_command(std::string_view command) -> PrinterWorker::Job
+    [[nodiscard]] static auto pjl_command(std::shared_ptr<PapplDevice> device, std::string_view command)
+        -> PrinterWorker::Job
     {
         auto command_copy = std::string(command);
 
-        return [command = std::move(command_copy)](PapplDevice& device) -> std::expected<void, common::DeviceError> {
-            auto result = device.write_all(common::UEL);
+        return [device  = std::move(device),
+                command = std::move(command_copy)] -> std::expected<void, common::DeviceError> {
+            auto result = device->write_all(common::UEL);
             if (result)
             {
-                result = device.write_all(common::PJL_PRE);
+                result = device->write_all(common::PJL_PRE);
             }
             if (result)
             {
-                result = device.write_all(" ");
+                result = device->write_all(" ");
             }
             if (result)
             {
-                result = device.write_all(command);
+                result = device->write_all(command);
             }
             if (result)
             {
-                result = device.write_all(common::CRLF);
+                result = device->write_all(common::CRLF);
             }
             if (result)
             {
-                result = device.write_all(common::UEL);
+                result = device->write_all(common::UEL);
             }
 
             return result;
@@ -137,8 +138,8 @@ public:
         auto result        = promise->get_future();
 
         static_cast<void>(m_worker.submit({
-            [output_len, promise](PapplDevice& device) -> std::expected<void, common::DeviceError> {
-                promise->set_value(device.read_string(output_len));
+            [device = m_device, output_len, promise] -> std::expected<void, common::DeviceError> {
+                promise->set_value(device->read_string(output_len));
                 return std::expected<void, common::DeviceError> {};
             },
         }));
@@ -157,8 +158,8 @@ private:
         /* Ensure printer is really reset */
         return m_worker
             .submit({
-                pjl_command("RESET"),
-                pjl_command("USTATUSOFF"),
+                pjl_command(m_device, "RESET"),
+                pjl_command(m_device, "USTATUSOFF"),
             })
             .get();
     }
@@ -173,9 +174,9 @@ private:
 
         return m_worker
             .submit({
-                pjl_command("USTATUS DEVICE=VERBOSE"),
-                pjl_command("USTATUS JOB=ON"),
-                pjl_command("USTATUS PAGE=ON"),
+                pjl_command(m_device, "USTATUS DEVICE=VERBOSE"),
+                pjl_command(m_device, "USTATUS JOB=ON"),
+                pjl_command(m_device, "USTATUS PAGE=ON"),
             })
             .get();
     }

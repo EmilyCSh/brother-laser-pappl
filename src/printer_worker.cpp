@@ -20,7 +20,6 @@ module;
 #include <stop_token>
 export module brother_laser.printer_worker;
 import brother_laser.common;
-import brother_laser.pappl;
 
 export namespace brother_laser {
 
@@ -41,20 +40,18 @@ public:
         SLEEP,
     };
 
-    using Job = std::function<std::expected<void, common::DeviceError>(PapplDevice&)>;
+    using Job = std::function<std::expected<void, common::DeviceError>()>;
 
 private:
-    std::shared_ptr<PapplDevice> m_device;
     std::mutex m_mutex;
     std::condition_variable m_condition;
-    std::queue<std::function<void(PapplDevice&)>> m_jobs;
+    std::queue<std::function<void()>> m_jobs;
     EnergyState m_energy_state = EnergyState::WORKING;
     std::chrono::steady_clock::time_point m_last_job_add_time;
     std::jthread m_thread;
 
 public:
-    explicit PrinterWorker(std::shared_ptr<PapplDevice> device)
-        : m_device(std::move(device)), m_last_job_add_time(std::chrono::steady_clock::now())
+    PrinterWorker() : m_last_job_add_time(std::chrono::steady_clock::now())
     {
         m_thread = std::jthread([this](std::stop_token stop_token) -> void {
             thread_function(std::move(stop_token));
@@ -82,10 +79,10 @@ public:
             return result;
         }
 
-        enqueue([jobs = std::move(jobs), promise](PapplDevice& device) -> void {
+        enqueue([jobs = std::move(jobs), promise] -> void {
             for (const auto& job : jobs)
             {
-                const auto job_result = job(device);
+                const auto job_result = job();
                 if (!job_result)
                 {
                     promise->set_value(job_result);
@@ -117,7 +114,7 @@ public:
     }
 
 private:
-    auto enqueue(std::function<void(PapplDevice&)> job) -> void
+    auto enqueue(std::function<void()> job) -> void
     {
         {
             const std::scoped_lock lock(m_mutex);
@@ -183,7 +180,7 @@ private:
                 m_last_job_add_time = std::chrono::steady_clock::now();
 
                 lock.unlock();
-                job(*m_device);
+                job();
             }
             else
             {
