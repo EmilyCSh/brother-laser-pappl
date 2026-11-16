@@ -26,9 +26,10 @@ export namespace brother_laser {
 class PrinterWorker
 {
 public:
-    constexpr static auto WORKING_SLEEP_TIME = std::chrono::milliseconds(10);
-    constexpr static auto IDLE_SLEEP_TIME    = std::chrono::milliseconds(100);
-    constexpr static auto SLEEP_SLEEP_TIME   = std::chrono::seconds(1);
+    constexpr static auto WORKING_SLEEP_TIME        = std::chrono::milliseconds(10);
+    constexpr static auto IDLE_SLEEP_TIME           = std::chrono::milliseconds(100);
+    constexpr static auto SLEEP_SLEEP_TIME          = std::chrono::seconds(1);
+    constexpr static auto LISTENER_CALLBACK_TIMEOUT = std::chrono::milliseconds(500);
 
     constexpr static auto IDLE_TRANSITION_TIME  = std::chrono::seconds(10);
     constexpr static auto SLEEP_TRANSITION_TIME = std::chrono::minutes(1);
@@ -49,9 +50,12 @@ private:
     EnergyState m_energy_state = EnergyState::WORKING;
     std::chrono::steady_clock::time_point m_last_job_add_time;
     std::jthread m_thread;
+    std::function<void(const std::stop_token& stop_token)> m_listener_callback;
 
 public:
-    PrinterWorker() : m_last_job_add_time(std::chrono::steady_clock::now())
+    explicit PrinterWorker(
+        std::function<void(const std::stop_token& stop_token)> listener_callback [[clang::lifetimebound]])
+        : m_last_job_add_time(std::chrono::steady_clock::now()), m_listener_callback(std::move(listener_callback))
     {
         m_thread = std::jthread([this](std::stop_token stop_token) -> void {
             thread_function(std::move(stop_token));
@@ -170,6 +174,24 @@ private:
             {
                 return;
             }
+
+            std::stop_source listener_stop_source;
+
+            const std::stop_callback callback_stop_callback(stop_token, [&listener_stop_source] -> void {
+                listener_stop_source.request_stop();
+            });
+
+            auto listener_callback_future =
+                std::async(std::launch::async, [this, token = listener_stop_source.get_token()] -> void {
+                    m_listener_callback(token);
+                });
+
+            if (listener_callback_future.wait_for(LISTENER_CALLBACK_TIMEOUT) == std::future_status::timeout)
+            {
+                listener_stop_source.request_stop();
+            }
+
+            listener_callback_future.get();
 
             if (!m_jobs.empty())
             {
