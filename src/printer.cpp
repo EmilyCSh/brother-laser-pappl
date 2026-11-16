@@ -13,6 +13,8 @@ module;
 #include <memory>
 #include <utility>
 #include <expected>
+#include <functional>
+#include <stop_token>
 export module brother_laser.printer;
 import brother_laser.common;
 import brother_laser.pappl;
@@ -40,7 +42,8 @@ public:
         std::string driver_name,
         std::string device_uri,
         std::shared_ptr<PapplDevice> device)
-        : m_driver_name(std::move(driver_name)), m_device_uri(std::move(device_uri)), m_device(std::move(device))
+        : m_driver_name(std::move(driver_name)), m_device_uri(std::move(device_uri)), m_device(std::move(device)),
+          m_worker(std::bind_front(&Printer::on_listen_callback, this))
     {}
 
     ~Printer()
@@ -179,6 +182,12 @@ private:
                 pjl_command(m_device, "USTATUS PAGE=ON"),
             })
             .get();
+    }
+
+    auto on_listen_callback(const std::stop_token& stop_token) -> void
+    {
+        static_cast<void>(stop_token);
+        static_cast<void>(this);
     }
 };
 
