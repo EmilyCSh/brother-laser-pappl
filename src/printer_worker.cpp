@@ -23,8 +23,7 @@ import brother_laser.common;
 
 export namespace brother_laser {
 
-class PrinterWorker
-{
+class PrinterWorker {
 public:
     constexpr static auto WORKING_SLEEP_TIME        = std::chrono::milliseconds(10);
     constexpr static auto IDLE_SLEEP_TIME           = std::chrono::milliseconds(100);
@@ -34,8 +33,7 @@ public:
     constexpr static auto IDLE_TRANSITION_TIME  = std::chrono::seconds(10);
     constexpr static auto SLEEP_TRANSITION_TIME = std::chrono::minutes(1);
 
-    enum class EnergyState
-    {
+    enum class EnergyState {
         WORKING,
         IDLE,
         SLEEP,
@@ -55,15 +53,13 @@ private:
 public:
     explicit PrinterWorker(
         std::function<void(const std::stop_token& stop_token)> listener_callback [[clang::lifetimebound]])
-        : m_last_job_add_time(std::chrono::steady_clock::now()), m_listener_callback(std::move(listener_callback))
-    {
+        : m_last_job_add_time(std::chrono::steady_clock::now()), m_listener_callback(std::move(listener_callback)) {
         m_thread = std::jthread([this](std::stop_token stop_token) -> void {
             thread_function(std::move(stop_token));
         });
     }
 
-    ~PrinterWorker()
-    {
+    ~PrinterWorker() {
         stop();
     }
 
@@ -72,23 +68,19 @@ public:
     PrinterWorker(PrinterWorker&&)                         = delete;
     auto operator=(PrinterWorker&&) -> PrinterWorker&      = delete;
 
-    [[nodiscard]] auto submit(std::vector<Job> jobs) -> std::future<std::expected<void, common::DeviceError>>
-    {
+    [[nodiscard]] auto submit(std::vector<Job> jobs) -> std::future<std::expected<void, common::DeviceError>> {
         const auto promise = std::make_shared<std::promise<std::expected<void, common::DeviceError>>>();
         auto result        = promise->get_future();
 
-        if (jobs.empty())
-        {
+        if (jobs.empty()) {
             promise->set_value({});
             return result;
         }
 
         enqueue([jobs = std::move(jobs), promise] -> void {
-            for (const auto& job : jobs)
-            {
+            for (const auto& job : jobs) {
                 const auto job_result = job();
-                if (!job_result)
-                {
+                if (!job_result) {
                     promise->set_value(job_result);
                     return;
                 }
@@ -100,26 +92,22 @@ public:
         return result;
     }
 
-    auto stop() -> void
-    {
+    auto stop() -> void {
         m_thread.request_stop();
         m_condition.notify_all();
 
-        if (m_thread.joinable())
-        {
+        if (m_thread.joinable()) {
             m_thread.join();
         }
     }
 
-    [[nodiscard]] auto get_energy_state() -> EnergyState
-    {
+    [[nodiscard]] auto get_energy_state() -> EnergyState {
         const std::scoped_lock lock(m_mutex);
         return m_energy_state;
     }
 
 private:
-    auto enqueue(std::function<void()> job) -> void
-    {
+    auto enqueue(std::function<void()> job) -> void {
         {
             const std::scoped_lock lock(m_mutex);
             m_jobs.push(std::move(job));
@@ -128,10 +116,8 @@ private:
         m_condition.notify_one();
     }
 
-    [[nodiscard]] static auto get_sleep_time(EnergyState energy_state) -> std::chrono::milliseconds
-    {
-        switch (energy_state)
-        {
+    [[nodiscard]] static auto get_sleep_time(EnergyState energy_state) -> std::chrono::milliseconds {
+        switch (energy_state) {
             case EnergyState::WORKING:
                 return WORKING_SLEEP_TIME;
             case EnergyState::IDLE:
@@ -143,24 +129,18 @@ private:
         std::unreachable();
     }
 
-    auto update_energy_state(std::chrono::steady_clock::time_point now) -> void
-    {
+    auto update_energy_state(std::chrono::steady_clock::time_point now) -> void {
         const auto elapsed = now - m_last_job_add_time;
 
-        if (elapsed >= SLEEP_TRANSITION_TIME)
-        {
+        if (elapsed >= SLEEP_TRANSITION_TIME) {
             m_energy_state = EnergyState::SLEEP;
-        }
-        else if (elapsed >= IDLE_TRANSITION_TIME)
-        {
+        } else if (elapsed >= IDLE_TRANSITION_TIME) {
             m_energy_state = EnergyState::IDLE;
         }
     }
 
-    auto thread_function(std::stop_token stop_token) -> void
-    {
-        while (!stop_token.stop_requested())
-        {
+    auto thread_function(std::stop_token stop_token) -> void {
+        while (!stop_token.stop_requested()) {
             std::unique_lock lock(m_mutex, std::defer_lock);
             lock.lock();
 
@@ -170,8 +150,7 @@ private:
                 return stop_token.stop_requested() || !m_jobs.empty();
             });
 
-            if (stop_token.stop_requested())
-            {
+            if (stop_token.stop_requested()) {
                 return;
             }
 
@@ -186,15 +165,13 @@ private:
                     m_listener_callback(token);
                 });
 
-            if (listener_callback_future.wait_for(LISTENER_CALLBACK_TIMEOUT) == std::future_status::timeout)
-            {
+            if (listener_callback_future.wait_for(LISTENER_CALLBACK_TIMEOUT) == std::future_status::timeout) {
                 listener_stop_source.request_stop();
             }
 
             listener_callback_future.get();
 
-            if (!m_jobs.empty())
-            {
+            if (!m_jobs.empty()) {
                 const auto job = std::move(m_jobs.front());
                 m_jobs.pop();
 
@@ -203,9 +180,7 @@ private:
 
                 lock.unlock();
                 job();
-            }
-            else
-            {
+            } else {
                 update_energy_state(std::chrono::steady_clock::now());
                 lock.unlock();
             }

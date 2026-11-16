@@ -23,27 +23,8 @@ AlwaysBreakBeforeMultilineStrings: false
 AlwaysBreakTemplateDeclarations: Yes
 BinPackArguments: false
 BinPackParameters: false
-BraceWrapping:
-  AfterCaseLabel: true
-  AfterClass: true
-  AfterControlStatement: true
-  AfterEnum: true
-  AfterFunction: true
-  AfterNamespace: false
-  AfterObjCDeclaration: true
-  AfterStruct: true
-  AfterUnion: true
-  AfterExternBlock: false
-  BeforeCatch: true
-  BeforeElse: true
-  IndentBraces: false
-  SplitEmptyFunction: false
-  SplitEmptyRecord: false
-  SplitEmptyNamespace: false
-  BeforeLambdaBody: false
-  BeforeWhile: false
 BreakBeforeBinaryOperators: NonAssignment
-BreakBeforeBraces: Custom
+BreakBeforeBraces: Attach
 BreakInheritanceList: BeforeColon
 BreakBeforeTernaryOperators: true
 BreakConstructorInitializers: BeforeColon
